@@ -1,0 +1,40 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(extSources, "Source Systems", "Внешние поставщики данных")
+Person(analyst, "Data Analysts / Users", "Используют данные для аналитики")
+
+System_Boundary(dp, "Data Platform") {
+
+    Container(ingest, "Data Ingestion Pipeline", "ETL/ELT", "Получает батчевые данные и отправляет их в движок классификации")
+
+    Container_Boundary(classEngine, "Data Classification Engine") {
+        Container(meta, "Metadata Extractor", "Service", "Извлекает схему, типы данных, статистику")
+        Container(rules, "Rules-based Classifier", "Service", "Детекторы полей по шаблонам, регулярным выражениям, названию")
+        Container(ml, "ML Classifier", "ML model", "ML-классификация полей по конфиденциальности")
+        Container(agg, "Confidence Aggregator", "Service", "Объединяет результаты правил и ML-классификации")
+        Container(policy, "Policy Enforcement Layer", "Service", "Маскирование, токенизация, псевдонимизация")
+    }
+
+    Container(dw, "Data Warehouse", "DWH", "Raw Layer, Secure PII Layer, Cleansed Layer, Analytics Layer")
+
+    Container(catalog, "Data Catalog / Governance", "DataGov", "Метаданные, классификация полей, lineage")
+
+    Container(monitor, "Monitoring & Metrics", "Monitoring", "Замер точности, latency, drift модели классификации")
+}
+
+Rel(extSources, ingest, "Поставляет входные данные")
+Rel(ingest, meta, "Передаёт сырые данные")
+Rel(meta, rules, "Метаинформация → правила")
+Rel(meta, ml, "Метаинформация → ML")
+Rel(rules, agg, "Классификация (rules)")
+Rel(ml, agg, "Классификация (ML)")
+Rel(agg, policy, "Выставление класса чувствительности")
+Rel(policy, dw, "Запись в соответствующий слой DWH")
+Rel(policy, catalog, "Сохранение классификации")
+Rel(policy, monitor, "Метрики (accuracy, drift)")
+Rel(dw, analyst, "Доступ к данным (обезличенным)")
+
+@enduml
